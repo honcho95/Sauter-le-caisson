@@ -1,0 +1,64 @@
+version: '3.3'
+
+#Networks are used to connect containers together.
+#A better way to isolate containers from each other.
+networks:
+  db:
+  web:
+
+services:
+  mariadb:
+    container_name: mariadb # container name 
+    build: ./requirements/mariadb # build from Dockerfile in this directory
+    env_file:
+      - .env # environment variables
+    volumes:
+      - db:/var/lib/mysql # volume for database files
+    networks:
+      - db # network for database
+    restart: unless-stopped # restart unless stopped by user or system failure 
+
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress
+    env_file:
+      - .env
+    depends_on:
+      - mariadb # depends on mariadb container to be running 
+    volumes:
+      - wp:/var/www/wordpress
+    networks:
+      - web # network for web server 
+      - db # network for db   
+    restart: unless-stopped
+
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx
+    ports:
+      - "443:443" # port mapping  
+    depends_on:
+      - wordpress # depends on wordpress container to be running  
+    volumes:
+      - wp:/var/www/wordpress
+    networks:
+      - web # network for web server 
+    restart: unless-stopped
+
+#Volume are usually used to store data that needs to persist even after the container is stopped or removed.
+
+volumes:
+  # volumes for database and wordpress files  
+  db:
+    driver: local
+    driver_opts:
+      # driver options for bind mount 
+      type: none # type of mount 
+      o: "bind" # bind mount  
+      device: "/home/tbaskhan/data/mariadb" # path to directory on host machine   
+  wp:
+    driver: local
+    driver_opts:
+      type: none
+      o: "bind"
+      device: "/home/tbaskhan/data/wordpress"
